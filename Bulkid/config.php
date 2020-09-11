@@ -1,0 +1,13 @@
+<?php
+define("DB_USER","DB_USER");
+define("DB_NAME","DB_NAME");
+define("DB_PASSWORD","DB_PASSWORD");
+define("CORONAID_TABLE",'CORONAID_TABLE');
+define("BOOTSTRAP_CSS",'BOOTSTRAP_CSS');
+define("BOOTSTRAP_JS",'BOOTSTRAP_JS');
+
+define("JSPDF_POLY_JS",'JSPDF_POLY_JS');
+define("JSPDF_JS",'JSPDF_JS');
+define("JSPDF_AUTOTABLE_JS",'JSPDF_AUTOTABLE_JS');
+
+?>
