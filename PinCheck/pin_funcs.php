@@ -36,6 +36,12 @@ function sendJson($ar,$headers=array())
 	
 }
 
+function notAuthenticated() {
+	header('HTTP/1.0 401 Unauthorized');
+	exit;
+}
+
+
 function setError($txt) {
 	global $ERR_MESSAGE;
 	
@@ -167,6 +173,7 @@ switch(@$_REQUEST['action']) {
 		checkPin(strtoupper($_REQUEST['form']['corona_id']),$_REQUEST['form']['pin']);
 		break;
 	case "search_by_id":
+		if(!isLoggedIn()) notAuthenticated();
 		sendJson(searchById(@$_REQUEST['corona_id'],@$_REQUEST['pin']));
 		break;
 	default:
