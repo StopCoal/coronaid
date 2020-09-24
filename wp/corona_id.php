@@ -45,7 +45,14 @@ switch(@$_REQUEST['form_action'])
     case "check_corona_id":
 		outputInfection($a['lang']);
         break;
+	case "save_adr":
+		saveCoronaAdr($a['lang']);
+		break;
     default:
+		if(@$a['form'] == 'adr') {
+			outputAdrForm($a['lang']);
+			break;
+		}
 		if( time() > $timeSwitch)
 			outputCheckForm($a['lang']);
 		else
@@ -534,3 +541,329 @@ JS
 <?php
 	
 }
+
+function outputAdrForm($lang) {
+	wp_enqueue_style('securimage_css',SECURIMAGE_CSS);
+	wp_enqueue_script( 'securimage_js',SECURIMAGE_JS, array("jquery"),'',true );
+
+	global $wpdb;
+	wp_add_inline_style( 'bootstrap_form_css', <<<CSS
+		div.show_corona_adr_form { display: inherit; }
+		.info_panel.corona_adr { max-width: 45rem;  }
+		#corona_id { max-width: 9rem; }
+		button[type=submit] { margin-top: 1.5rem; }
+CSS
+);
+		
+	$lang_ar= array(
+		"de" => array(
+			0 => "Kontaktinformationen zu Corona ID",
+			1 => "Vorname",
+			2 => "Nachname",
+			3 => "Straße Hnr.",
+			4 => "PLZ",
+			5 => "Email",
+			6 => "Telefon",
+			7 => "Speichern",
+			8 => "Ort",
+			9 => "Zu wenige oder nicht erlaubte Zeichen eingegeben",
+			10 => "persönliche Corona ID",
+			11 => "Eingabe Captcha",
+			12 => "Neues Captcha laden",
+			13 => "Eingabe Captcha nicht korrekt",
+		),
+		"en" => array(
+			0 => "Kontaktinformationen zu Corona ID",
+			1 => "Vorname",
+			2 => "Nachname",
+			3 => "Straße Hnr.",
+			4 => "PLZ",
+			5 => "Email",
+			6 => "Telefon",
+			7 => "Speichern",
+			8 => "Ort",
+			9 => "Too few or not allowed characters entered",
+			10 => "persönliche Corona ID",
+			11 => "Input Captcha",
+			12 => "Reload Captcha",
+			13 => "Input Captcha incorrect",
+		),
+		"fr" => array(
+			0 => "Kontaktinformationen zu Corona ID",
+			1 => "Vorname",
+			2 => "Nachname",
+			3 => "Straße Hnr.",
+			4 => "PLZ",
+			5 => "Email",
+			6 => "Telefon",
+			7 => "Speichern",
+			8 => "Ort",
+			9 => "Trop peu ou pas assez de caractères saisis",
+			10 => "persönliche Corona ID",
+			11 => "Saisi Captcha",
+			12 => "Charger un nouveau captcha",
+			13 => "Saisi Captcha incorrecte",
+		),
+	);
+	$l=$lang_ar[$lang];
+
+	wp_add_inline_script( 'securimage_js',<<<JS
+
+(function($){
+	
+	$(document).ready(function()
+	{
+		$("#corona_adr_form").submit(function(e) {			
+			let captchaId=$(this).find("input[name=captchaId]");
+			let captcha_code=$(this).find("input[name=captcha_code]");
+			if(captcha_code.length > 0) e.preventDefault();
+			checkCoronaCaptcha(e.currentTarget,captcha_code.val(),captchaId.val());
+		});
+		
+		$("#bt_refresh_captcha").click(refreshCaptcha);
+	});
+
+function checkCoronaCaptcha(form,captcha_code,captchaId) {
+	$.post({
+		url: "/custom/libs/securimage/securimage_ajax.php",
+		data: {
+			captcha_code: captcha_code,
+			captchaId: captchaId
+		},
+		success: function(data,  textStatus,  jqXHR ) {
+			if(!data.state)  form.submit();
+			
+			if(data.state == 1) {
+				alert("{$l[13]}");
+				return;
+			}
+			form.submit();
+			
+		}
+	})
+	.fail(function(xhr, status, error) {
+		form.submit();
+	});;					
+}
+
+function refreshCaptcha() {
+	$.post({
+		url: SECURIMAGE_AJAX,
+		data: {
+			refresh: 1
+		},
+		success: function(data,  textStatus,  jqXHR ) {
+			if(!data.state || data.state != 0)  return;
+			
+            let src = '/custom/libs/securimage/captcha_display.php?captchaId=' + data.captchaId+ '&rand=' + Math.random();
+            $('#corona_id_captcha').attr('src', src); // replace image with new captcha
+            $('#captchaId').attr('value', data.captchaId); // update hidden form field
+			
+		}
+	});					
+}
+
+	
+})(jQuery);
+
+JS
+);
+	
+    require_once(SECURIMAGE_PHP);
+	$captchaId = Securimage::getCaptchaId(true);
+
+		
+?>	
+<div class="panel panel-default info_panel corona_adr">
+  <div class="panel-heading"><?php echo $l[0]; ?></div>
+  <div class="panel-body">
+	  <div class="info_row">
+		<form id="corona_adr_form"  class="" action="#corona_form" method="POST">
+			<?php wp_nonce_field('corona_adr_form'); ?>
+			
+			<div class="form-group">
+				<label for="corona_id" ><?php echo $l[10]; ?></label>
+				<input type="text" class="form-control" id="corona_id" name="corona_id" placeholder="ID"
+				  pattern="[ABCDEFGHIKLMNOPSTUWXYZabcdefghiklmnopstuwxyz]*" minlength="5" maxlength="5" required="required"
+				  style="text-transform: uppercase; "
+				  oninvalid="this.setCustomValidity('<?php echo $l[9]; ?>')"
+				   oninput="this.setCustomValidity('')" 
+				   value="<?php echo @$_REQUEST['corona_id']; ?>" >
+
+			</div>
+			<hr />
+			<div class="form-group row">
+				<div class="col-sm-6">
+					<label for="firstname"><?php echo $l[1]; ?></label>
+					<input type="text" class="form-control" id="firstname" name="firstname" required="required" >
+				</div>
+				<div class="col-sm-6">
+					<label for="surname"><?php echo $l[2]; ?></label>
+					<input type="text" class="form-control" id="surname" name="surname" required="required" >
+				</div>
+			</div>
+			<div class="form-group">
+				<label for="street"><?php echo $l[3]; ?></label>
+				<input type="text" class="form-control" id="street" name="street" required="required" >
+			</div>
+			<div class="form-group row">
+				<div class="col-sm-3 col-xs-5">
+					<label for="zip"><?php echo $l[4]; ?></label>
+					<input type="text" class="form-control" id="zip" name="zip" required="required" >
+				</div>
+				<div class="col-sm-9 col-xs-7">
+					<label for="city"><?php echo $l[8]; ?></label>
+					<input type="text" class="form-control" id="city" name="city" required="required" >
+				</div>
+			</div>
+			<div class="form-group">
+				<label for="email"><?php echo $l[5]; ?></label>
+				<input type="email" class="form-control" id="email" name="email" required="required" >
+			</div>
+			<div class="form-group">
+				<label for="phone"><?php echo $l[6]; ?></label>
+				<input type="tel" class="form-control" id="phone" name="phone" required="required" >
+			</div>
+			<input type="hidden" id="captchaId" name="captchaId" value="<?php echo $captchaId ?>" />
+			<img id="corona_id_captcha" src="<?php echo SECURIMAGE_PHP; ?>?captchaId=<?php echo $captchaId ?>" alt="captcha image" />			
+			<div class="input-group input-group-sm captcha_input">
+				<input type="text" class="form-control" name="captcha_code" maxlength="6" placeholder="<?php echo $l[11]; ?>" required="required" />
+				<span class="input-group-btn">
+					<div class="btn btn-default" id="bt_refresh_captcha" type="button" title="<?php echo $l[12]; ?>">
+						<img class="captcha_refresh_image" src="<?php echo SECURIMAGE_BASE; ?>/refresh.png" alt="Refresh Image" onclick="this.blur()" >
+					</div>
+				</span>
+			</div>
+			<input type="hidden" id="form_action" name="form_action" value="save_adr" />
+			<button type="submit"  class="btn btn-default"><?php echo $l[7]; ?></button>
+		</form>
+	  </div>
+  </div>
+</div>
+
+<?php
+	
+}
+
+function saveCoronaAdr($lang) {
+wp_enqueue_script( 'bootstrap_form_js', get_home_url(null,BOOTSTRAP_JS), array("jquery"),'',true );	
+
+wp_add_inline_style( 'bootstrap_form_css', <<<CSS
+div.show_adr_saved { display: inherit; }
+
+CSS
+);
+
+
+	$lang_ar= array(
+		"de" => array(
+			0 => "Speicherung Kontaktdaten",
+			1 => "Die Daten wurden verschlüsselt gespeichert und werden an die Treuhänder*in weitergeleitet.",
+		),
+		"en" => array(
+			0 => "Speicherung Kontaktdaten",
+			1 => "Die Daten wurden verschlüsselt gespeichert und werden an die Treuhänder*in weitergeleitet.",
+		),
+		"fr" => array(
+			0 => "Speicherung Kontaktdaten",
+			1 => "Die Daten wurden verschlüsselt gespeichert und werden an die Treuhänder*in weitergeleitet.",
+		),
+	);
+	$l=$lang_ar[$lang];
+
+
+    require_once(SECURIMAGE_PHP);
+	if(!wp_verify_nonce(@$_REQUEST['_wpnonce'],'corona_adr_form'))
+	{
+		echo("<div class='alert alert-danger' role='alert'>Keine Berechtigung um diese Funktion zu nutzen</div>");
+		return;
+	}
+    
+	if (Securimage::checkByCaptchaId($_REQUEST['captchaId'], $_REQUEST['captcha_code']) == false) {
+	  echo "<div class='alert alert-danger' role='alert'>Das Captcha wurde nicht korrekt gelöst, bitte noch einmal versuchen <a href='javascript:history.go(-1)'>zurück</a></div> ";
+	  return;
+	}  
+    
+	$pdo = new \PDO('mysql:host=localhost;dbname=' . DB_NAME , DB_USER, DB_PASSWORD);
+	try {                             
+		$pdo ->beginTransaction();
+		if( empty(@$_REQUEST['corona_id']) || empty(@$_REQUEST['firstname']) || empty(@$_REQUEST['surname']) ||
+			empty(@$_REQUEST['street']) || empty(@$_REQUEST['zip']) || empty(@$_REQUEST['city']) ||
+			empty(@$_REQUEST['email']) || empty(@$_REQUEST['phone']) )
+				throw new \Exception("Daten nicht vollständig");
+		$CORONA_ID=strtoupper($_REQUEST['corona_id']);
+		
+		$sql = 'SELECT * FROM ' . CORONAID_TABLE . ' WHERE corona_key=:corona_key LIMIT 1 FOR UPDATE;';
+		$statement = $pdo->prepare($sql);
+		$statement->execute(array( 'corona_key' => $CORONA_ID) );
+		$row=$statement->fetch(PDO::FETCH_ASSOC);
+		if($row === false) throw new \Exception("Datenbankfehler bitte noch einmal versuchen");
+		
+		if($row['state'] == 0) throw new \Exception("Fehler in Corona ID");
+
+		$f = fopen('php://memory', 'w');
+		if($f === false) throw new \Exception("Interner Fehler (csv) bitte noch einmal versuchen");
+		if(fputcsv($f,array(
+			$_REQUEST['firstname'],
+			$_REQUEST['surname'],
+			$_REQUEST['street'],
+			$_REQUEST['zip'],
+			$_REQUEST['city'],
+			$_REQUEST['email'],
+			$_REQUEST['phone'],			
+		), ';', '"', "\\") === false )
+				throw new \Exception("Interner Fehler (csv) bitte noch einmal versuchen");
+		rewind($f);
+		$csvData=stream_get_contents($f);
+		fclose($f);	
+		if($csvData === false) throw new \Exception("Interner Fehler (csv) bitte noch einmal versuchen");
+		
+		$BOM=chr(0xEF).chr(0xBB).chr(0xBF); //Workaround so that Excel see UTF-8
+		$csvData=$BOM . $csvData;
+		
+		
+		putenv("GNUPGHOME=" . GNUPGHOME);
+		$gnupg = new gnupg();
+
+		$gnupg->setsignmode(gnupg::SIG_MODE_CLEAR);
+		if($gnupg->addencryptkey(CRYPTKEY_PUB_FINGERPRINT) === false)
+			throw new \Exception("Cryptfehler (encryptkey) bitte noch einmal versuchen");
+		if($gnupg->addsignkey(SIGNKEY_PRIV_FINGERPRINT) === false)
+			throw new \Exception("Cryptfehler (signkey) bitte noch einmal versuchen");
+		
+		$signed = $gnupg->encryptsign($csvData);
+		if($signed === false) throw new \Exception("Cryptfehler (encryptsign) bitte noch einmal versuchen");
+		
+		$serial=($row['state'] > 1)?"-" . ($row['state'] - 1):"";
+		$dataFile=DATADIR . $CORONA_ID . "{$serial}.csv.asc";
+		if(file_put_contents($dataFile,$signed) === false)
+			throw new \Exception("Fehler beim Speichern bitte noch einmal versuchen");
+		
+		$sql = 'UPDATE eg_data.corona_id SET state = state + 1  WHERE id=:id;';
+		$statement = $pdo->prepare($sql);
+		if(!$statement->execute(array("id" => $row['id'], ))) {
+			if(file_exists($dataFile)) unlink($dataFile);
+			throw new \Exception("Fehler (db) beim Speichern bitte noch einmal versuchen");
+		}
+		$pdo->commit();
+	} catch (Exception $e) {
+		$pdo->rollBack();
+		echo "<h4>{$e->getMessage()} <a href='javascript:window.history.back();'>Zurück</a></h4>";
+		return;
+	}
+
+?>
+<div class="panel panel-default info_panel infect_result ">
+  <div class="panel-heading"><?php echo $l[0]; ?></div>
+  <div class="panel-body">
+	  <div class="info_row">
+			<?php echo $l[1]; ?>
+	  </div>
+  </div>
+</div>
+
+<?php
+	
+}
+
+?>
