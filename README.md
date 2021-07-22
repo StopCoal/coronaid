@@ -11,3 +11,6 @@ External Dependencies: JSPDF, Bootstrap 3.4, JQuery<br>
 ### PinCheck:<br>
 Form to check PIN for Corona ID including search<br>
 External Depenencied: JS Autotab, Bootstrap 3.4, JQuery<br>
+### Corona ID recording:<br>
+app to record ID's from Meetings and identify infection clusters<br>
+External Depenencied: XAMPP<br>
